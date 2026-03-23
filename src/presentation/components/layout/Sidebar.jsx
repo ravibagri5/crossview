@@ -145,7 +145,7 @@ export const Sidebar = ({ onToggle, onResize }) => {
     { id: 'functions', label: 'Functions', icon: FiCode, path: '/functions', tooltip: 'Crossplane Functions - composable building blocks for Compositions' },
     { id: 'xrds', label: 'XRDs', icon: FiBook, path: '/xrds', tooltip: 'Composite Resource Definitions - define custom resource types' },
     { id: 'compositions', label: 'Compositions', icon: FiLayers, path: '/compositions', tooltip: 'Templates that define how to compose resources' },
-    { id: 'mrds', label: 'MRDs', icon: FiBox, path: '/mrds', tooltip: 'Managed Resource Definitions - available managed resource types from providers' },
+    { id: 'mrds', label: 'MRDs', icon: FiLayers, path: '/mrds', tooltip: 'Managed Resource Definitions - available managed resource types from providers' },
     { id: 'mraps', label: 'MRAPs', icon: FiShield, path: '/mraps', tooltip: 'Managed Resource Activation Policies - control managed resource activation' },
     // Crossplane Instances (created resources)
     { 
