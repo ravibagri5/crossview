@@ -1,63 +1,81 @@
 # Changelog
 
-# v3.6.0 (March 2026)
+# v3.8.0 (April 2026)
 
-This release brings authentication flexibility, UI enhancements, important bug fixes for resource visibility and events, Helm chart improvements, organization migration to `crossplane-contrib`, and better governance/documentation. The database is now optional in certain auth modes for lighter deployments.
+## Features & Enhancements
 
-**Pre-release testing summary:** Iterated through 7 release candidates (rc.1 → rc.7) with fixes applied rapidly between March 1–5, 2026.
+- **Handle missing Kubernetes API resources gracefully**  
+  - Add `IsMissingKubernetesResourceError` helper to classify missing-resource cases, including the “the server could not find the requested resource” message.
+  - Use that helper in Kubernetes resource listing so unsupported APIs return an empty result instead of bubbling up as an error.
+  - Update the Kubernetes controller to treat those missing-resource errors as `200 OK` with empty `items`, avoiding the 500 path.
+  - Add tests for the new helper and for the controller behavior when `Function` APIs are unavailable.
 
-## 🚀 Features & Enhancements
+- **Add support for Managed Resource Definitions (MRD) and Managed Resource Activation Policies (MRAP)**  
+  - Introduce dedicated pages for MRDs and MRAPs following the existing XRDs pattern.
+  - MRDs page includes columns for NAME, STATE, ESTABLISHED, AGE with multi-filter support and status badges.
+  - MRAPs page provides a clean view with NAME and AGE.
+  - Both pages include ResourceDetails slideout and improved error handling with messaging for Crossplane 2.0 upgrades.
 
-- **Flexible authentication modes**  
-  Added support for `header` (trust an HTTP header for user identity) and `none` (disable auth entirely) modes, in addition to existing methods.  
-  Configurable via Helm values: `server.auth.mode`, `trustedHeader`, `createUsers`, `defaultRole`.  
-  Database is skipped when using `header` or `none` modes → enables lighter, stateless deployments.  
-  UI now adapts dynamically based on `/api/auth/check` response.  
-  Full documentation and local testing examples (including nginx header proxy setup) included.
+- **PostgreSQL SSL/TLS connection support**  
+  - Add configurable SSL/TLS options for PostgreSQL connections via new environment variables: `DB_SSL_MODE`, `DB_SSL_ROOT_CERT`, `DB_SSL_CERT`, and `DB_SSL_KEY`.
+  - Dynamically build the DSN with `sslmode`, `sslrootcert`, `sslcert`, and `sslkey` parameters (supports `disable`, `require`, `verify-ca`, `verify-full`, etc.).
+  - Update configuration (`config.yaml`, `loader.js`), Helm chart values, ConfigMap, and deployment templates to support a nested `ssl` object.
+  - Default to `sslmode=disable` for backward compatibility.
+  - Remove password from connection failure logs for improved security.
 
-- **External secrets support**  
-  Added compatibility with external secret management; removed mandatory database dependency in non-authenticated scenarios.  
-  Updated example configurations to reflect these changes.
+- **Automate changelog, release notes, and PR title linting**  
+  - Introduce automation using Conventional Commits and `changelog-cli` to generate `CHANGELOG.md` and `RELEASE_NOTES.md` during releases.
+  - Add GitHub release integration (attach release notes and use them as description).
+  - Enforce consistent PR titles via `lint-pr-title.yml` workflow.
+  - Update `docs/CONTRIBUTING.md` with guidelines for PR titles, commits, and release notes.
+  - Add local development support (scripts and `changelog-cli` dependency).
 
-- **UI visualization improvements**  
-  Enhanced YAML parser and syntax highlighter.  
-  Implemented custom floating edges for React Flow (better graph visualization of resources and relationships).
+## Bug Fixes & Improvements
 
-## 🐛 Bug Fixes
+- **Fix server-side table search to filter full dataset**  
+  - Apply search filtering to the complete dataset before pagination (instead of only the current page) in server-side mode.
+  - Ensure search terms and searchable fields are properly passed to fetch callbacks.
+  - Update filtering logic for Managed Resources, Claims, Composite Resources, Compositions, MRDs, and MRAPs.
+  - Use continue tokens for Composite resource retrieval to support full-dataset filtering.
+  - Total count now reflects the size of the filtered dataset.
 
-- Fixed event fetching tabs for composite resources and managed resources (#182)
-- Resolved role selection dialog issues in user management (create & edit dialogs) (#179)
-- Corrected Helm chart icon image URL (#178)
-- Fixed "ready resources" filter not working correctly in the global search page (#176)
+- **Add SSL properties to Helm values schema**  
+  - Fix missing SSL configuration properties in the Helm values JSON schema (follow-up to PostgreSQL SSL support).
 
-## 🔧 Maintenance & Housekeeping
+- **Validate Helm release version against existing GitHub releases**  
+  - Add version validation job in the Helm release workflow to prevent publishing arbitrary or mismatched versions.
+  - Make test and release jobs dependent on successful validation.
+  - Improve error messaging to show already-released versions when validation fails.
 
-- **Organization migration**  
-  Moved repo from `corpobit` → `crossplane-contrib` (#175)
+- **Updated readme**  
+  - Fix `Helm Repository` address in the README (was pointing to the old organization).
 
-- **Documentation & governance**  
-  Added/updates: Contributing guide, MAINTAINERS file, SECURITY.md policy, README table of contents + community links, CODE_OF_CONDUCT.md (#167 & related)
+- **Provided default values for admin username and password in `helm/crossview/values.yaml`**  
+```yaml
+secrets:
+  adminUsername: "admin"
+  adminPassword: "password"
+```
 
-- **Other fixes & contributions**  
-  Kubernetes client: deferred `RUnlock` after conditional re-lock in `GetContexts` (thanks @wnqueiroz)  
-  Reverted earlier problematic security patches (Feb 10) to stabilize the branch
+- **Improve documentation for production SSO deployments**  
+  - Document `server.cors.origin` (`CORS_ORIGIN`) as a required field for any non-local deployment using SSO. When unset, the post-login redirect goes to `http://localhost:5173` instead of the actual host.
+  - Add a dedicated "Required: Set `server.cors.origin` for Production" section to `docs/SSO_SETUP.md` with config file, env var, and Helm examples.
+  - Update `callbackURL` examples throughout `docs/SSO_SETUP.md` to use a real host (`https://crossview.example.com/api/auth/oidc/callback`) instead of localhost.
+  - Add `CORS_ORIGIN` to `docs/CONFIGURATION.md` server settings and SSO troubleshooting section.
+  - Add inline warning comment on `config.server.cors.origin` in `helm/crossview/values.yaml`.
 
-- **Release engineering**  
-  Automated version bumps to v3.6.0-rc.1 through v3.6.0-rc.7 (via GitHub Actions bot)
+- **Document default admin credentials for session auth mode**  
+  - Add a "Default Admin Credentials" subsection to `docs/CONFIGURATION.md` noting that the default username/password is `admin`/`password` and documenting how to override them via Helm values or environment variables.
+  - Add default credentials as the top item in the Security Best Practices section.
 
-## 📦 Helm Chart & Deployment Changes
+## Contributors
 
-- Updated icon image address in chart
-- Better SSO/user management configuration options
-- Adjusted templates for improved testing and deployment reliability
+A big thank you to all the contributors who helped make this release possible!
 
-## How to Test / Upgrade
+- **conclusionlogic** – for gracefully handling missing Kubernetes API resources
+- **ravibagri5** – for adding support for Managed Resource Definitions (MRD) and Managed Resource Activation Policies (MRAP)
+- **MoeidHeidari** – for PostgreSQL SSL/TLS connection support and Helm schema fixes
+- **Berk-Unsal** – for fixing server-side table search to work on the full dataset
+- **erfanmo** – for automating changelog generation, release notes, PR title linting, and Helm version validation
 
-1. Use the latest RC tag: `v3.6.0-rc.7` (or build from `pre-release` branch)
-2. Helm install/upgrade example:
-   ```bash
-   helm upgrade --install crossview oci://ghcr.io/crossplane-contrib/charts/crossview \
-     --version 3.6.0-rc.7 \
-     --namespace crossview --create-namespace \
-     --set server.auth.mode=header \
-     --set trustedHeader=X-Auth-Request-User
+Thank you for your valuable contributions! 🙏
